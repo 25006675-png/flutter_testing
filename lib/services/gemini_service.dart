@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'api_key.dart';
 
 class GeminiService {
   // 1. Private static instance
@@ -15,22 +16,40 @@ class GeminiService {
 
   // 4. Configuration
   // TODO: Ideally, fetch this from a secure backend or .env file, not hardcoded here.
-  final String _apiKey = "AIzaSyB1PV9MEokMWVtP2XRd5njPSlbY5ICZNxk"; 
+  final String _apiKey = geminiApiKey; 
   final String _model = "gemini-2.5-flash";
 
   Future<String> sendMessage(String prompt) async {
-    final Uri url = Uri.parse(
-      "https://generativelanguage.googleapis.com/v1beta/models/$_model:generateContent?key=$_apiKey",
-    );
+      final Uri url = Uri.parse(
+        "https://generativelanguage.googleapis.com/v1beta/models/$_model:generateContent?key=$_apiKey",
+      );
 
-    final headers = {"Content-Type": "application/json"};
-    final body = jsonEncode({
-      "contents": [
-        {
-          "parts": [{"text": prompt}]
+      final headers = {
+        "Content-Type": "application/json",
+      };
+
+      final body = jsonEncode({
+        // 1. SYSTEM INSTRUCTION: This gives the AI a "Concise Persona"
+        "systemInstruction": {
+          "parts": [
+            {"text": "You are a helpful assistant. Keep your answers short, concise, and under 3 sentences."}
+          ]
+        },
+        "contents": [
+          {
+            "parts": [
+              {"text": prompt}
+            ]
+          }
+        ],
+        // 2. CONFIGURATION: This sets a hard limit so it doesn't ramble
+        "generationConfig": {
+          "maxOutputTokens": 150, // Limits reply to roughly 100 words
+          "temperature": 0.7, // Optional: Controls creativity (0.0 is robotic, 1.0 is creative)
         }
-      ]
-    });
+      });
+
+  
 
     try {
       final res = await http.post(url, headers: headers, body: body);
